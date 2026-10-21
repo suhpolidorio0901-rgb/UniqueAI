@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UniqueAI</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+<style>
+:root{--blue:#1a56ff;--sky:#4aa3ff;--ice:#eaf2ff;--ink:#0b1b3f;--mute:#6477a1;--line:#d6e3ff;--white:#fff}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:var(--ice);color:var(--ink);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--white);border-bottom:1px solid var(--line)}
+.logo{width:34px;height:34px;border-radius:11px;background:conic-gradient(from 200deg,#4285f4,#1a56ff,#10a37f,#20808d,#d97757,#4285f4);display:grid;place-items:center;color:#fff;font-size:20px;line-height:1}
+h1{font-size:20px;margin:0;font-weight:800;letter-spacing:-.02em;flex:1}
+h1 span{color:var(--blue)}
+.icon{border:0;background:var(--ice);color:var(--blue);width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer}
+#chat{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.empty{margin:auto;text-align:center;color:var(--mute);max-width:280px}
+.empty .big{font-size:46px;color:var(--blue)}
+.me{align-self:flex-end;background:var(--blue);color:#fff;padding:10px 14px;border-radius:18px 18px 4px 18px;max-width:85%;white-space:pre-wrap}
+.me img,.ans img{max-width:100%;border-radius:12px;display:block;margin-top:8px}
+.ans{align-self:flex-start;background:var(--white);border:1px solid var(--line);padding:12px 14px;border-radius:18px 18px 18px 4px;max-width:92%;line-height:1.5}
+.ans .txt{white-space:pre-wrap;word-wrap:break-word}
+.bar{display:flex;align-items:center;gap:8px;margin-top:10px}
+.spark{border:1px solid var(--line);background:var(--ice);color:var(--blue);width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer}
+.spark.open{background:var(--blue);color:#fff}
+.status{font-size:13px;color:var(--mute)}
+.debate{display:none;margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;font-size:14px}
+.debate.show{display:block}
+.rnd{font-weight:700;color:var(--blue);margin:10px 0 6px}
+.msg{border-left:3px solid var(--c);padding:4px 0 4px 10px;margin:6px 0;white-space:pre-wrap}
+.msg b{color:var(--c)}
+#composer{background:var(--white);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+#preview{display:none;align-items:center;gap:8px;font-size:13px;color:var(--mute)}
+#preview img{height:44px;border-radius:8px}
+#preview button{border:0;background:none;color:var(--mute);font-size:16px}
+.row{display:flex;gap:8px;align-items:flex-end}
+textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:18px;padding:10px 14px;font:inherit;max-height:120px;background:var(--ice);color:var(--ink)}
+textarea:focus,input:focus{outline:2px solid var(--sky);outline-offset:1px}
+.send{border:0;background:var(--blue);color:#fff;width:42px;height:42px;border-radius:50%;font-size:18px;cursor:pointer}
+.send:disabled{opacity:.5}
+.tog{font-size:13px;color:var(--mute);display:flex;gap:6px;align-items:center}
+dialog{border:0;border-radius:18px;padding:18px;width:min(92vw,420px);color:var(--ink)}
+dialog::backdrop{background:rgba(11,27,63,.4)}
+dialog label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+dialog input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font:inherit}
+dialog .go{margin-top:14px;width:100%;border:0;background:var(--blue);color:#fff;padding:10px;border-radius:12px;font:inherit;font-weight:600}
+@media (prefers-reduced-motion:no-preference){.spark{transition:background .2s}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">✦</div>
+  <h1>Unique<span>AI</span></h1>
+  <button class="icon" id="cfg" aria-label="Configurações">⚙</button>
+</header>
+
+<div id="chat"><div class="empty"><div class="big">✦</div><p>Mande um pedido. Gemini, ChatGPT, Claude e Perplexity debatem e você recebe uma resposta só.</p></div></div>
+
+<div id="composer">
+  <div id="preview"><img id="pimg" alt=""><span>Imagem anexada</span><button id="rm" aria-label="Remover">✕</button></div>
+  <label class="tog"><input type="checkbox" id="genimg"> Gerar uma imagem como resposta</label>
+  <div class="row">
+    <button class="icon" id="att" aria-label="Anexar imagem">🖼</button>
+    <input type="file" id="file" accept="image/*" hidden>
+    <textarea id="q" rows="1" placeholder="Pergunte ou peça algo…"></textarea>
+    <button class="send" id="go" aria-label="Enviar">➤</button>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <b>Configurações</b>
+  <label>Chave do OpenRouter (openrouter.ai/keys)</label>
+  <input id="key" type="password" placeholder="sk-or-...">
+  <label>Modelo que escreve a resposta final</label>
+  <input id="mfinal" placeholder="anthropic/claude-sonnet-4.5">
+  <label>Modelo de imagem</label>
+  <input id="mimg" placeholder="google/gemini-2.5-flash-image">
+  <label>Participantes (nome=modelo, um por linha)</label>
+  <textarea id="mlist" rows="5" style="width:100%;border-radius:10px"></textarea>
+  <button class="go" id="save">Salvar</button>
+</dialog>
+
+<script>
+const DEF={
+  final:'anthropic/claude-sonnet-4.5',
+  img:'google/gemini-2.5-flash-image',
+  list:'Gemini=google/gemini-2.5-flash\nChatGPT=openai/gpt-4o\nClaude=anthropic/claude-sonnet-4.5\nPerplexity=perplexity/sonar'
+};
+const COLORS={Gemini:'#4285f4',ChatGPT:'#10a37f',Claude:'#d97757',Perplexity:'#20808d'};
+const $=id=>document.getElementById(id);
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+const cfg=()=>({
+  key:ls('uai_key')||'',
+  final:ls('uai_final')||DEF.final,
+  img:ls('uai_img')||DEF.img,
+  list:(ls('uai_list')||DEF.list).split('\n').map(l=>l.trim()).filter(l=>l.includes('=')).map(l=>{const i=l.indexOf('=');return{name:l.slice(0,i).trim(),id:l.slice(i+1).trim()}})
+});
+let attached=null, history=[], busy=false;
+
+// ---------- configurações
+$('cfg').onclick=()=>{const c=cfg();$('key').value=c.key;$('mfinal').value=c.final;$('mimg').value=c.img;$('mlist').value=(ls('uai_list')||DEF.list);$('dlg').showModal()};
+$('save').onclick=()=>{ls('uai_key',$('key').value.trim());ls('uai_final',$('mfinal').value.trim()||DEF.final);ls('uai_img',$('mimg').value.trim()||DEF.img);ls('uai_list',$('mlist').value);$('dlg').close()};
+
+// ---------- imagem anexada
+$('att').onclick=()=>$('file').click();
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{attached=r.result;$('pimg').src=attached;$('preview').style.display='flex'};r.readAsDataURL(f)};
+$('rm').onclick=()=>{attached=null;$('file').value='';$('preview').style.display='none'};
+$('q').addEventListener('input',e=>{e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,120)+'px'});
+
+// ---------- API
+async function ask(model,messages,extra){
+  const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+cfg().key,'Content-Type':'application/json'},
+    body:JSON.stringify(Object.assign({model,messages,max_tokens:900},extra||{}))
+  });
+  const d=await r.json();
+  if(!r.ok||d.error)throw new Error((d.error&&d.error.message)||('Erro '+r.status));
+  return d.choices[0].message;
+}
+function userContent(text,img,allowImg){
+  if(img&&allowImg)return[{type:'text',text},{type:'image_url',image_url:{url:img}}];
+  return text;
+}
+
+// ---------- UI helpers
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
+function addMsg(box,name,text,color){
+  const m=el('div','msg');m.style.setProperty('--c',color||'#1a56ff');
+  const b=el('b',null,name+': ');m.append(b,document.createTextNode(text));box.append(m);return m;
+}
+function scrollDown(){const c=$('chat');c.scrollTop=c.scrollHeight}
+
+// ---------- fluxo principal
+async function run(){
+  if(busy)return;
+  const text=$('q').value.trim();
+  if(!text&&!attached)return;
+  const c=cfg();
+  if(!c.key){$('cfg').click();return}
+  busy=true;$('go').disabled=true;
+  const img=attached, wantImg=$('genimg').checked, prompt=text||'Descreva esta imagem.';
+  $('q').value='';$('q').style.height='auto';$('rm').click();
+  const chat=$('chat');const emp=chat.querySelector('.empty');if(emp)emp.remove();
+
+  const me=el('div','me',prompt);
+  if(img){const i=el('img');i.src=img;me.append(i)}
+  chat.append(me);
+
+  const ans=el('div','ans');
+  const txt=el('div','txt','…');
+  const bar=el('div','bar');
+  const spark=el('button','spark','✦');spark.setAttribute('aria-label','Ver conversa das IAs');
+  const status=el('span','status','As IAs estão lendo…');
+  bar.append(spark,status);
+  const debate=el('div','debate');
+  ans.append(txt,bar,debate);chat.append(ans);scrollDown();
+  spark.onclick=()=>{const o=debate.classList.toggle('show');spark.textContent=o?'✕':'✦';spark.classList.toggle('open',o);scrollDown()};
+
+  const ctx=history.slice(-4).map(h=>'Pessoa: '+h.q+'\nResposta: '+h.a).join('\n\n');
+  const base=(ctx?'Conversa até aqui:\n'+ctx+'\n\n':'')+'Pedido da pessoa: '+prompt;
+  const sys={role:'system',content:'Você faz parte de um conselho de IAs. Responda em português do Brasil, de forma direta e útil.'};
+
+  try{
+    // Rodada 1
+    debate.append(el('div','rnd','Rodada 1 · cada IA responde'));
+    const r1=await Promise.all(c.list.map(async m=>{
+      const slot=addMsg(debate,m.name,'pensando…',COLORS[m.name]);
+      try{
+        const msg=await ask(m.id,[sys,{role:'user',content:userContent(base,img,m.name!=='Perplexity')}]);
+        slot.lastChild.textContent=msg.content;return{...m,a:msg.content,ok:true};
+      }catch(e){slot.lastChild.textContent='(falhou: '+e.message+')';return{...m,a:'',ok:false}}
+    }));
+    const ok1=r1.filter(x=>x.ok);
+    if(!ok1.length)throw new Error('Nenhuma IA respondeu. Confira sua chave e os modelos nas configurações.');
+
+    // Rodada 2
+    status.textContent='Elas estão debatendo…';
+    debate.append(el('div','rnd','Rodada 2 · leitura e crítica'));
+    const all=ok1.map(x=>'['+x.name+']\n'+x.a).join('\n\n');
+    const r2=await Promise.all(ok1.map(async m=>{
+      const slot=addMsg(debate,m.name,'lendo as outras…',COLORS[m.name]);
+      try{
+        const q='Pedido: '+prompt+'\n\nRespostas do conselho:\n'+all+'\n\nVocê é '+m.name+'. Aponte em até 4 frases o que as outras acertaram ou erraram e diga como a melhor resposta final deveria ser.';
+        const msg=await ask(m.id,[sys,{role:'user',content:q}],{max_tokens:400});
+        slot.lastChild.textContent=msg.content;return{name:m.name,a:msg.content};
+      }catch(e){slot.lastChild.textContent='(falhou: '+e.message+')';return{name:m.name,a:''}}
+    }));
+
+    // Final
+    status.textContent='Juntando a resposta…';
+    const crit=r2.filter(x=>x.a).map(x=>'['+x.name+']\n'+x.a).join('\n\n');
+    const fq='Pedido: '+prompt+'\n\nRespostas:\n'+all+'\n\nCríticas:\n'+crit+'\n\nEscreva a melhor resposta final para a pessoa, sem citar o debate.'+(wantImg?' A pessoa quer uma IMAGEM: em vez da resposta, escreva só um prompt visual detalhado em inglês para um gerador de imagens.':'');
+    const fin=await ask(c.final,[sys,{role:'user',content:fq}],{max_tokens:1200});
+    let answer=fin.content;
+    debate.append(el('div','rnd','Decisão final'));
+    addMsg(debate,'Conselho',answer,'#1a56ff');
+
+    if(wantImg){
+      status.textContent='Criando a imagem…';
+      txt.textContent='';
+      const im=await ask(c.img,[{role:'user',content:userContent(answer,img,true)}],{modalities:['image','text'],max_tokens:1000});
+      const url=im.images&&im.images[0]&&im.images[0].image_url&&im.images[0].image_url.url;
+      if(!url)throw new Error('O modelo de imagem não devolveu imagem.');
+      const i=el('img');i.src=url;txt.append(i);
+      answer='[imagem gerada: '+answer+']';
+    }else txt.textContent=answer;
+    history.push({q:prompt,a:answer.slice(0,800)});
+    status.textContent='';
+  }catch(e){
+    txt.textContent='Não deu certo: '+e.message;status.textContent='';
+  }
+  busy=false;$('go').disabled=false;scrollDown();
+}
+$('go').onclick=run;
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&window.innerWidth>700){e.preventDefault();run()}});
+</script>
+</body>
+</html>
